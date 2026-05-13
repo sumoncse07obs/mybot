@@ -1,37 +1,96 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, UserRound } from 'lucide-react';
+import {
+  BookOpen,
+  Bot,
+  ChevronDown,
+  FileText,
+  Folder,
+  Goal,
+  HeartPulse,
+  Settings,
+  UserRound,
+} from 'lucide-react';
 
-const navItems = [
-      { label: 'Dashboard', path: '/customer/dashboard', icon: LayoutDashboard },
-      { label: 'Profile', path: '/customer/profile', icon: UserRound },
-];
+interface Props {
+  isOpen: boolean;
+}
 
-export default function Sidebar() {
+const mentors = ['Jen', 'Dwayne', 'Oz', 'Ryan'];
+
+export default function Sidebar({ isOpen }: Props) {
   return (
-    <aside className="sidebar">
-      <div className="brand">
-        <div className="brand-mark">B</div>
+    <aside className={`guru-sidebar customer-guru-sidebar ${isOpen ? 'open' : 'closed'}`}>
+      <div className="guru-sidebar-tools">
+        <button type="button" aria-label="Back">‹</button>
+        <button type="button" aria-label="Search">⌕</button>
+      </div>
+
+      <div className="mentor-grid">
+        {mentors.map((mentor, index) => (
+          <div className="mentor-pill" key={mentor}>
+            <div className={`mentor-face face-${index + 1}`}>{mentor.charAt(0)}</div>
+            <span>{mentor}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="myguruuz-mark">
+        <span>💡</span>
+        <strong>My Guruuz</strong>
+      </div>
+
+      <div className="guru-sidebar-section-title">Mission Control</div>
+
+      <div className="guru-folder-list">
+        <NavLink to="/customer/dashboard" className="guru-folder-item">
+          <ChevronDown size={14} />
+          <Folder size={16} />
+          <span>My Big Business</span>
+        </NavLink>
+        <NavLink to="/customer/dashboard" className="guru-folder-item">
+          <Folder size={16} />
+          <span>Work / Life Balance</span>
+        </NavLink>
+        <NavLink to="/customer/dashboard" className="guru-folder-item">
+          <HeartPulse size={16} />
+          <span>Health & Fitness</span>
+        </NavLink>
+        <NavLink to="/customer/dashboard" className="guru-folder-item active-blue">
+          <BookOpen size={16} />
+          <span>Journal</span>
+        </NavLink>
+        <NavLink to="/customer/profile" className="guru-folder-item">
+          <UserRound size={16} />
+          <span>Profile</span>
+        </NavLink>
+        <NavLink to="/customer/dashboard" className="guru-folder-item">
+          <Bot size={16} />
+          <span>Agent Settings</span>
+        </NavLink>
+      </div>
+
+      <div className="guru-sidebar-card">
+        <Goal size={36} />
         <div>
-          <h1>Customer Panel</h1>
-          <p>Business workspace</p>
+          <strong>Progress</strong>
+          <span>On Your Goals</span>
         </div>
       </div>
 
-      <nav className="nav-list">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <NavLink key={item.label} to={item.path} className="nav-link">
-              <Icon size={18} />
-              <span>{item.label}</span>
-            </NavLink>
-          );
-        })}
-      </nav>
+      <div className="guru-sidebar-card active-card">
+        <FileText size={36} />
+        <div>
+          <strong>Journal</strong>
+          <span>Access Your Journal</span>
+        </div>
+      </div>
 
-      <div className="sidebar-footer">
-        <span>BotAPI</span>
-        <small>React + FastAPI</small>
+      <div className="guru-sidebar-card">
+        <Settings size={34} />
+        <div>
+          <strong>Settings</strong>
+          <span>Your Profile</span>
+        </div>
       </div>
     </aside>
   );

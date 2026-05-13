@@ -1,27 +1,124 @@
-import { LogOut } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Bell, ChevronDown, KeyRound, LogOut, Menu, Settings, Sprout, Sun } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import type { AuthUser } from '@/types';
 
 interface Props {
   user: AuthUser | null;
   onLogout: () => void;
+  onToggleSidebar: () => void;
 }
 
-export default function Topbar({ user, onLogout }: Props) {
-  const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.email || 'Unknown user';
+export default function Topbar({ user, onLogout, onToggleSidebar }: Props) {
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const notificationRef = useRef<HTMLDivElement | null>(null);
+  const profileRef = useRef<HTMLDivElement | null>(null);
+
+  const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.email || 'Admin';
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as Node;
+      if (notificationRef.current && !notificationRef.current.contains(target)) {
+        setNotificationsOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(target)) {
+        setProfileOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
-    <header className="topbar">
-      <div>
-        <p className="eyebrow">Logged in as</p>
-        <h2>{fullName}</h2>
+    <header className="guru-topbar">
+      <div className="guru-topbar-left">
+        <Link to="/admin/dashboard" className="guru-logo" aria-label="Admin dashboard">
+          <span className="guru-logo-blue">My</span><span className="guru-logo-green">Guruu</span>
+        </Link>
       </div>
 
-      <div className="topbar-actions">
-        <span className={`role-pill role-${user?.role}`}>{user?.role}</span>
-        <button className="logout-btn" onClick={onLogout}>
-          <LogOut size={18} />
-          Logout
+      <div className="guru-topbar-date">Wednesday, 5.13.26</div>
+
+      <div className="guru-topbar-actions">
+        <button className="guru-icon-button sun" type="button" aria-label="Theme">
+          <Sun size={25} />
         </button>
+
+        <button className="guru-icon-button" type="button" onClick={onToggleSidebar} aria-label="Toggle sidebar">
+          <Menu size={22} />
+        </button>
+
+        <div className="guru-popup-wrap" ref={notificationRef}>
+          <button
+            className="guru-icon-button notification"
+            type="button"
+            onClick={() => setNotificationsOpen((value) => !value)}
+            aria-label="Notifications"
+          >
+            <Bell size={21} />
+            <span>4</span>
+          </button>
+
+          {notificationsOpen && (
+            <div className="guru-dropdown guru-notification-dropdown">
+              <div className="guru-dropdown-header">
+                <strong>Notifications</strong>
+                <small>Admin alerts</small>
+              </div>
+              <div className="guru-notification-item">
+                <strong>Server uptime</strong>
+                <span>System health check is ready.</span>
+              </div>
+              <div className="guru-notification-item">
+                <strong>User usage</strong>
+                <span>Token usage report needs review.</span>
+              </div>
+              <div className="guru-notification-item">
+                <strong>Security</strong>
+                <span>No critical issues detected.</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="guru-popup-wrap" ref={profileRef}>
+          <button
+            className="guru-avatar-button"
+            type="button"
+            onClick={() => setProfileOpen((value) => !value)}
+            aria-label="User menu"
+          >
+            <Sprout size={21} />
+            <ChevronDown size={14} />
+          </button>
+
+          {profileOpen && (
+            <div className="guru-dropdown guru-profile-dropdown">
+              <div className="guru-profile-head">
+                <div className="guru-avatar-circle"><Sprout size={21} /></div>
+                <div>
+                  <strong>{fullName}</strong>
+                  <span>{user?.role || 'Admin'}</span>
+                </div>
+              </div>
+              <Link to="/admin/profile" onClick={() => setProfileOpen(false)}>
+                <Settings size={16} />
+                Settings
+              </Link>
+              <Link to="/admin/profile" onClick={() => setProfileOpen(false)}>
+                <KeyRound size={16} />
+                Change Password
+              </Link>
+              <button type="button" onClick={onLogout}>
+                <LogOut size={16} />
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

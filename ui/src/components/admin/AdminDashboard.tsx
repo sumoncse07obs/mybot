@@ -1,31 +1,23 @@
-import { Bot, ShieldCheck, Users } from 'lucide-react';
-
 export default function AdminDashboard() {
   return (
-    <div className="dashboard-page">
-      <div className="page-header">
-        <span className="page-kicker">Admin only</span>
-        <h1>Admin Dashboard</h1>
-        <p>Only users with role admin can access this dashboard.</p>
-      </div>
+    <div className="guru-dashboard admin-guru-dashboard">
+      <h1>Welcome to Admin Dashboard</h1>
 
-      <div className="card-grid">
-        <div className="stat-card">
-          <Users />
-          <h3>User Management</h3>
-          <p>Promote users to customers, deactivate accounts, and manage platform access.</p>
+      <div className="guru-admin-summary-grid">
+        <div className="guru-summary-card">
+          <span>Server Status</span>
+          <strong>Online</strong>
+          <p>Breaks server uptime and core health checks.</p>
         </div>
-
-        <div className="stat-card">
-          <ShieldCheck />
-          <h3>Security Control</h3>
-          <p>Admin routes are guarded in the frontend by role-based route protection.</p>
+        <div className="guru-summary-card">
+          <span>User Tokens</span>
+          <strong>Usage</strong>
+          <p>Track how users consume tokens across the platform.</p>
         </div>
-
-        <div className="stat-card">
-          <Bot />
-          <h3>Agent Setup</h3>
-          <p>Future home for global agent templates, system prompts, and RAG resources.</p>
+        <div className="guru-summary-card">
+          <span>Most Used Guruu</span>
+          <strong>Report</strong>
+          <p>Monitor which Guruu gets the most engagement.</p>
         </div>
       </div>
     </div>
