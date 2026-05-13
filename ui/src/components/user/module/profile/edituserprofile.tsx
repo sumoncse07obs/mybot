@@ -1,7 +1,12 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { getAuthUser } from '@/api/auth/auth';
 import type { AuthUser } from '@/types';
-import { changeProfilePassword, getProfile, updateProfile } from '@/components/user/module/profile/api/userapi';
+import {
+  changeProfilePassword,
+  getProfile,
+  updateProfile,
+  type UpdateProfilePayload,
+} from '@/components/user/module/profile/api/userapi';
 import { useToast } from '@/components/shared/toast/ToastProvider';
 
 type ProfileForm = {
@@ -94,7 +99,7 @@ export default function EditUserProfile() {
   }, [toast]);
 
   async function saveProfile(
-    payload: Partial<ProfileForm>,
+    payload: UpdateProfilePayload,
     message: string,
     setSaving: (value: boolean) => void,
   ) {
