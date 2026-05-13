@@ -18,6 +18,7 @@ class LoginRequest(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
+    current_password: str
     new_password: str
 
 
@@ -39,15 +40,37 @@ class UserResponse(BaseModel):
     is_active: bool
     created_at: datetime
 
-    model_config = {
-        "from_attributes": True
-    }
+    avatar: Optional[str] = None
+    country: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip: Optional[str] = None
+    address: Optional[str] = None
+    company_name: Optional[str] = None
+    website: Optional[str] = None
+    bio: Optional[str] = None
 
 
 class AuthResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class UpdateProfileRequest(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    phone: Optional[str] = None
+
+    avatar: Optional[str] = None
+    country: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    zip: Optional[str] = None
+    address: Optional[str] = None
+    company_name: Optional[str] = None
+    website: Optional[str] = None
+    bio: Optional[str] = None
 
 
 class AdminUserListResponse(BaseModel):

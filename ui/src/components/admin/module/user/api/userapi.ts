@@ -60,7 +60,7 @@ export function changeAdminUserRole(id: number, role: Role) {
 export function changeAdminUserPassword(id: number, password: string) {
   return apiRequest<{ message: string }>(`/admin/users/${id}/password`, {
     method: 'PATCH',
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ new_password: password }),
   });
 }
 

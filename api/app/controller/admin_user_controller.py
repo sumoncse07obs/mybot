@@ -62,7 +62,7 @@ async def change_user_password(
 ):
     user = await get_user(user_id, db)
 
-    user.password = hash_password(data.password)
+    user.password = hash_password(data.new_password)
 
     await db.commit()
 

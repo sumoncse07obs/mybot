@@ -3,6 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database.db import get_db
 from app.models.user_model import User
@@ -38,7 +39,11 @@ async def get_current_user(
             detail="Invalid token",
         )
 
-    result = await db.execute(select(User).where(User.id == int(user_id)))
+    result = await db.execute(
+        select(User)
+        .options(selectinload(User.meta))
+        .where(User.id == int(user_id))
+    )
     user = result.scalar_one_or_none()
 
     if not user:

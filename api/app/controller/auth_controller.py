@@ -1,19 +1,45 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.user_model import User
+from app.models.user_meta_model import UserMeta
 from app.schemas.auth_schema import (
     RegisterRequest,
     LoginRequest,
     ChangePasswordRequest,
+    UpdateProfileRequest,
 )
-
 from app.services.auth_service import (
     hash_password,
     verify_password,
     create_access_token,
 )
+
+
+def serialize_user(user: User):
+    meta = user.meta
+
+    return {
+        "id": user.id,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+        "phone": user.phone,
+        "role": user.role,
+        "is_active": user.is_active,
+        "created_at": user.created_at,
+        "avatar": meta.avatar if meta else None,
+        "country": meta.country if meta else None,
+        "city": meta.city if meta else None,
+        "state": meta.state if meta else None,
+        "zip": meta.zip if meta else None,
+        "address": meta.address if meta else None,
+        "company_name": meta.company_name if meta else None,
+        "website": meta.website if meta else None,
+        "bio": meta.bio if meta else None,
+    }
 
 
 async def register_user(data: RegisterRequest, db: AsyncSession):
@@ -34,9 +60,14 @@ async def register_user(data: RegisterRequest, db: AsyncSession):
     )
 
     db.add(user)
-
     await db.commit()
-    await db.refresh(user)
+
+    result = await db.execute(
+        select(User)
+        .options(selectinload(User.meta))
+        .where(User.email == data.email)
+    )
+    user = result.scalar_one()
 
     token = create_access_token({
         "sub": str(user.id),
@@ -47,31 +78,23 @@ async def register_user(data: RegisterRequest, db: AsyncSession):
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": user,
+        "user": serialize_user(user),
     }
 
 
 async def login_user(data: LoginRequest, db: AsyncSession):
-    result = await db.execute(select(User).where(User.email == data.email))
+    result = await db.execute(
+        select(User)
+        .options(selectinload(User.meta))
+        .where(User.email == data.email)
+    )
     user = result.scalar_one_or_none()
 
-    if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password",
-        )
-
-    if not verify_password(data.password, user.password):
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password",
-        )
+    if not user or not verify_password(data.password, user.password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     if not user.is_active:
-        raise HTTPException(
-            status_code=403,
-            detail="Account is inactive",
-        )
+        raise HTTPException(status_code=403, detail="Account is inactive")
 
     token = create_access_token({
         "sub": str(user.id),
@@ -82,8 +105,52 @@ async def login_user(data: LoginRequest, db: AsyncSession):
     return {
         "access_token": token,
         "token_type": "bearer",
-        "user": user,
+        "user": serialize_user(user),
     }
+
+
+async def update_profile(
+    data: UpdateProfileRequest,
+    current_user: User,
+    db: AsyncSession,
+):
+    user_fields = ["first_name", "last_name", "phone"]
+    meta_fields = [
+        "avatar",
+        "country",
+        "city",
+        "state",
+        "zip",
+        "address",
+        "company_name",
+        "website",
+        "bio",
+    ]
+
+    update_data = data.model_dump(exclude_unset=True)
+
+    for field in user_fields:
+        if field in update_data:
+            setattr(current_user, field, update_data[field])
+
+    if any(field in update_data for field in meta_fields):
+        if current_user.meta is None:
+            current_user.meta = UserMeta(user_id=current_user.id)
+
+        for field in meta_fields:
+            if field in update_data:
+                setattr(current_user.meta, field, update_data[field])
+
+    await db.commit()
+
+    result = await db.execute(
+        select(User)
+        .options(selectinload(User.meta))
+        .where(User.id == current_user.id)
+    )
+    updated_user = result.scalar_one()
+
+    return serialize_user(updated_user)
 
 
 async def change_password(
@@ -91,11 +158,11 @@ async def change_password(
     current_user: User,
     db: AsyncSession,
 ):
+    if data.current_password and not verify_password(data.current_password, current_user.password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
     current_user.password = hash_password(data.new_password)
 
     await db.commit()
-    await db.refresh(current_user)
 
-    return {
-        "message": "Password changed successfully"
-    }
+    return {"message": "Password changed successfully"}
