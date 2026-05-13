@@ -1,9 +1,14 @@
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_model import User
-from app.schemas.auth_schema import RegisterRequest, LoginRequest
+from app.schemas.auth_schema import (
+    RegisterRequest,
+    LoginRequest,
+    ChangePasswordRequest,
+)
+
 from app.services.auth_service import (
     hash_password,
     verify_password,
@@ -29,6 +34,7 @@ async def register_user(data: RegisterRequest, db: AsyncSession):
     )
 
     db.add(user)
+
     await db.commit()
     await db.refresh(user)
 
@@ -50,13 +56,22 @@ async def login_user(data: LoginRequest, db: AsyncSession):
     user = result.scalar_one_or_none()
 
     if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password",
+        )
 
     if not verify_password(data.password, user.password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password",
+        )
 
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="Account is inactive")
+        raise HTTPException(
+            status_code=403,
+            detail="Account is inactive",
+        )
 
     token = create_access_token({
         "sub": str(user.id),
@@ -68,4 +83,19 @@ async def login_user(data: LoginRequest, db: AsyncSession):
         "access_token": token,
         "token_type": "bearer",
         "user": user,
+    }
+
+
+async def change_password(
+    data: ChangePasswordRequest,
+    current_user: User,
+    db: AsyncSession,
+):
+    current_user.password = hash_password(data.new_password)
+
+    await db.commit()
+    await db.refresh(current_user)
+
+    return {
+        "message": "Password changed successfully"
     }

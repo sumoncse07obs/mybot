@@ -7,8 +7,8 @@ import {
   deleteAdminUser,
   getAdminUsers,
   updateAdminUser,
-} from './api/userapi';
-import type { Role } from '../../../../types';
+} from '@/components/admin/module/user/api/userapi';
+import type { Role } from '@/types';
 
 type CreateUserForm = {
   first_name: string;

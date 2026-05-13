@@ -1,6 +1,6 @@
-import type { Role } from '../../../../../types';
+import type { Role } from '@/types';
 
-import { apiRequest } from '../../../../../api/context/apiClient';
+import { apiRequest } from '@/api/context/apiClient';
 
 export interface AdminUser {
   id: number;

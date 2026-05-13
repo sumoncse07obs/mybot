@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { dashboardPathForRole, getAuthUser, isLoggedIn } from '../../../api/auth/auth';
+import { dashboardPathForRole, getAuthUser, isLoggedIn } from '@/api/auth/auth';
 
 interface Props {
   children: ReactNode;

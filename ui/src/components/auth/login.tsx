@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { login, dashboardPathForRole, saveAuth } from '../../api/auth/auth';
+import { login, dashboardPathForRole, saveAuth } from '@/api/auth/auth';
 
 export default function LoginPage() {
   const navigate = useNavigate();

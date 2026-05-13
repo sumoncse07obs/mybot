@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import ListUser from './listuser';
-import NewUser from './newuser';
-import EditUser from './edituser';
+import ListUser from '@/components/admin/module/user/listuser';
+import NewUser from '@/components/admin/module/user/newuser';
+import EditUser from '@/components/admin/module/user/edituser';
 
 export default function AdminUserRoutes() {
   return (

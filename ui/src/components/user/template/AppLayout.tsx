@@ -1,7 +1,7 @@
 import { Outlet, useNavigate } from 'react-router-dom';
-import { clearAuth, getAuthUser } from '../../../api/auth/auth';
-import Sidebar from './Sidebar';
-import Topbar from './Topbar';
+import { clearAuth, getAuthUser } from '@/api/auth/auth';
+import Sidebar from '@/components/user/template/Sidebar';
+import Topbar from '@/components/user/template/Topbar';
 
 export default function UserAppLayout() {
   const navigate = useNavigate();

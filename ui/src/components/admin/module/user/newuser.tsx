@@ -1,4 +1,4 @@
-import ListUser from './listuser';
+import ListUser from '@/components/admin/module/user/listuser';
 
 export default function NewUser() {
   return <ListUser />;

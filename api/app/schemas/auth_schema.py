@@ -17,6 +17,18 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ChangePasswordRequest(BaseModel):
+    new_password: str
+
+
+class AdminChangePasswordRequest(BaseModel):
+    new_password: str
+
+
+class AdminChangeRoleRequest(BaseModel):
+    role: str
+
+
 class UserResponse(BaseModel):
     id: int
     first_name: Optional[str] = None
@@ -60,11 +72,3 @@ class AdminUserUpdateRequest(BaseModel):
     is_active: Optional[bool] = None
     system_prompt: Optional[str] = None
     openai_api_key: Optional[str] = None
-
-
-class AdminChangePasswordRequest(BaseModel):
-    password: str
-
-
-class AdminChangeRoleRequest(BaseModel):
-    role: str

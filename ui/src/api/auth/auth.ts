@@ -1,5 +1,5 @@
-import type { AuthResponse, AuthUser, LoginPayload, RegisterPayload, Role } from '../../types';
-import { apiRequest } from '../context/apiClient';
+import type { AuthResponse, AuthUser, LoginPayload, RegisterPayload, Role } from '@/types';
+import { apiRequest } from '@/api/context/apiClient';
 
 const TOKEN_KEY = 'botapi_token';
 const USER_KEY = 'botapi_user';
@@ -21,6 +21,10 @@ export function register(payload: RegisterPayload) {
 export function saveAuth(auth: AuthResponse) {
   localStorage.setItem(TOKEN_KEY, auth.access_token);
   localStorage.setItem(USER_KEY, JSON.stringify(auth.user));
+}
+
+export function setAuthUser(user: AuthUser) {
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function getAuthUser(): AuthUser | null {

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import type { Role } from '../../../types';
-import { getAuthUser, isLoggedIn } from '../../../api/auth/auth';
+import type { Role } from '@/types';
+import { getAuthUser, isLoggedIn } from '@/api/auth/auth';
 
 interface Props {
   allowedRoles: Role[];

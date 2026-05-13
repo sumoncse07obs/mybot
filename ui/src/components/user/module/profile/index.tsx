@@ -1,5 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
-import EditUserProfile from './edituserprofile';
+import EditUserProfile from '@/components/user/module/profile/edituserprofile';
 
 export default function ProfileRoutes() {
   return (
