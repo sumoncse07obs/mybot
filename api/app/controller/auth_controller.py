@@ -158,11 +158,10 @@ async def change_password(
     current_user: User,
     db: AsyncSession,
 ):
-    if data.current_password and not verify_password(data.current_password, current_user.password):
-        raise HTTPException(status_code=400, detail="Current password is incorrect")
-
     current_user.password = hash_password(data.new_password)
 
     await db.commit()
 
     return {"message": "Password changed successfully"}
+
+

@@ -1,12 +1,38 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Bell, ChevronDown, KeyRound, LogOut, Menu, Settings, Sprout, Sun } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { AuthUser } from '@/types';
+import { API_BASE } from '@/api/context/apiClient';
 
 interface Props {
   user: AuthUser | null;
   onLogout: () => void;
   onToggleSidebar: () => void;
+}
+
+function formatTopbarDate() {
+  const date = new Date();
+
+  const weekday = date.toLocaleDateString('en-US', {
+    weekday: 'long',
+  });
+
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = String(date.getFullYear()).slice(-2);
+
+  return `${weekday}, ${month}.${day}.${year}`;
+}
+
+function avatarUrl(avatar?: string | null) {
+  if (!avatar) return null;
+  if (avatar.startsWith('http')) return avatar;
+  if (avatar.startsWith('/')) return `${API_BASE}${avatar}`;
+  return avatar;
+}
+
+function getDisplayName(user: AuthUser | null) {
+  return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.email || 'Customer';
 }
 
 export default function Topbar({ user, onLogout, onToggleSidebar }: Props) {
@@ -15,14 +41,18 @@ export default function Topbar({ user, onLogout, onToggleSidebar }: Props) {
   const notificationRef = useRef<HTMLDivElement | null>(null);
   const profileRef = useRef<HTMLDivElement | null>(null);
 
-  const fullName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.email || 'Customer';
+  const fullName = getDisplayName(user);
+  const currentDate = useMemo(() => formatTopbarDate(), []);
+  const userAvatar = avatarUrl(user?.avatar);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
+
       if (notificationRef.current && !notificationRef.current.contains(target)) {
         setNotificationsOpen(false);
       }
+
       if (profileRef.current && !profileRef.current.contains(target)) {
         setProfileOpen(false);
       }
@@ -35,20 +65,21 @@ export default function Topbar({ user, onLogout, onToggleSidebar }: Props) {
   return (
     <header className="guru-topbar">
       <div className="guru-topbar-left">
+        <button className="guru-icon-button" type="button" onClick={onToggleSidebar} aria-label="Toggle sidebar">
+          <Menu size={22} />
+        </button>
+        
         <Link to="/customer/dashboard" className="guru-logo" aria-label="Customer dashboard">
-          <span className="guru-logo-blue">My</span><span className="guru-logo-green">Guruu</span>
+          <span className="guru-logo-blue">My</span>
+          <span className="guru-logo-green">customer</span>
         </Link>
       </div>
 
-      <div className="guru-topbar-date">Wednesday, 5.13.26</div>
+      <div className="guru-topbar-date">{currentDate}</div>
 
       <div className="guru-topbar-actions">
         <button className="guru-icon-button sun" type="button" aria-label="Theme">
           <Sun size={25} />
-        </button>
-
-        <button className="guru-icon-button" type="button" onClick={onToggleSidebar} aria-label="Toggle sidebar">
-          <Menu size={22} />
         </button>
 
         <div className="guru-popup-wrap" ref={notificationRef}>
@@ -87,27 +118,40 @@ export default function Topbar({ user, onLogout, onToggleSidebar }: Props) {
             onClick={() => setProfileOpen((value) => !value)}
             aria-label="User menu"
           >
-            <Sprout size={21} />
+            {userAvatar ? (
+              <img className="guru-avatar-img" src={userAvatar} alt={fullName} />
+            ) : (
+              <Sprout size={21} />
+            )}
             <ChevronDown size={14} />
           </button>
 
           {profileOpen && (
             <div className="guru-dropdown guru-profile-dropdown">
               <div className="guru-profile-head">
-                <div className="guru-avatar-circle"><Sprout size={21} /></div>
+                <div className="guru-avatar-circle">
+                  {userAvatar ? (
+                    <img className="guru-avatar-img" src={userAvatar} alt={fullName} />
+                  ) : (
+                    <Sprout size={21} />
+                  )}
+                </div>
+
                 <div>
                   <strong>{fullName}</strong>
-                  <span>{user?.role || 'Customer'}</span>
                 </div>
               </div>
+
               <Link to="/customer/profile" onClick={() => setProfileOpen(false)}>
                 <Settings size={16} />
                 Settings
               </Link>
+
               <Link to="/customer/profile" onClick={() => setProfileOpen(false)}>
                 <KeyRound size={16} />
                 Change Password
               </Link>
+
               <button type="button" onClick={onLogout}>
                 <LogOut size={16} />
                 Sign Out

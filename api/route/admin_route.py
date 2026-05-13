@@ -4,15 +4,16 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.db import get_db
-from app.models.user_model import User
 from app.services.auth_guard import require_admin
 from app.schemas.auth_schema import (
     AdminUserListResponse,
+    AdminUserCreateRequest,
     AdminUserUpdateRequest,
     AdminChangePasswordRequest,
     AdminChangeRoleRequest,
 )
 from app.controller.admin_user_controller import (
+    create_user,
     list_users,
     get_user,
     update_user,
@@ -20,6 +21,7 @@ from app.controller.admin_user_controller import (
     change_user_password,
     change_user_role,
 )
+
 
 router = APIRouter(
     prefix="/admin",
@@ -31,6 +33,14 @@ router = APIRouter(
 @router.get("/users", response_model=List[AdminUserListResponse])
 async def admin_list_users(db: AsyncSession = Depends(get_db)):
     return await list_users(db)
+
+
+@router.post("/users", response_model=AdminUserListResponse)
+async def admin_create_user(
+    data: AdminUserCreateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    return await create_user(data, db)
 
 
 @router.get("/users/{user_id}", response_model=AdminUserListResponse)

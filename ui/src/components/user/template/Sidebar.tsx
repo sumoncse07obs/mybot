@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, UserRound } from 'lucide-react';
+import { LayoutDashboard, UserRound,Images } from 'lucide-react';
 
 const navItems = [
   { label: 'Dashboard', path: '/user/dashboard', icon: LayoutDashboard },
   { label: 'Profile', path: '/user/profile', icon: UserRound },
+  { label: 'Media', path: '/user/media', icon: Images },
 ];
 
 export default function Sidebar() {

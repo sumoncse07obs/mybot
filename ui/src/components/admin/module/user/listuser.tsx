@@ -8,6 +8,7 @@ import {
   getAdminUsers,
   updateAdminUser,
 } from '@/components/admin/module/user/api/userapi';
+import { useToast } from '@/components/shared/toast/ToastProvider';
 import type { Role } from '@/types';
 
 type CreateUserForm = {
@@ -32,33 +33,43 @@ const emptyCreateForm: CreateUserForm = {
 
 const inputClass =
   'min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10';
+
 const labelClass = 'grid gap-2 text-sm font-bold text-slate-700';
+
 const buttonClass =
   'inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60';
+
 const darkButtonClass =
   'inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-950 bg-slate-950 px-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60';
 
 export default function AdminUsersPage() {
+  const toast = useToast();
+
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState<CreateUserForm>(emptyCreateForm);
   const [creating, setCreating] = useState(false);
 
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const [passwordUser, setPasswordUser] = useState<AdminUser | null>(null);
   const [newPassword, setNewPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
-  async function loadUsers() {
+  async function loadUsers(showSuccess = false) {
     try {
       setLoading(true);
-      setError('');
       const data = await getAdminUsers();
       setUsers(data);
+
+      if (showSuccess) {
+        toast.success('Users refreshed successfully.');
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load users');
+      toast.error(err instanceof Error ? err.message : 'Failed to load users');
     } finally {
       setLoading(false);
     }
@@ -69,17 +80,17 @@ export default function AdminUsersPage() {
   }, []);
 
   async function handleCreateUser() {
+    if (!createForm.email.trim()) {
+      toast.error('Email is required.');
+      return;
+    }
+
+    if (!createForm.password.trim()) {
+      toast.error('Password is required.');
+      return;
+    }
+
     try {
-      if (!createForm.email.trim()) {
-        alert('Email is required');
-        return;
-      }
-
-      if (!createForm.password.trim()) {
-        alert('Password is required');
-        return;
-      }
-
       setCreating(true);
 
       await createAdminUser({
@@ -95,59 +106,98 @@ export default function AdminUsersPage() {
       setShowCreateModal(false);
       setCreateForm(emptyCreateForm);
       await loadUsers();
+      toast.success('User created successfully.');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to create user');
+      toast.error(err instanceof Error ? err.message : 'Failed to create user');
     } finally {
       setCreating(false);
     }
   }
 
   async function handleRoleChange(userId: number, role: Role) {
-    await changeAdminUserRole(userId, role);
-    await loadUsers();
+    try {
+      await changeAdminUserRole(userId, role);
+      await loadUsers();
+      toast.success('User role updated successfully.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update role');
+    }
   }
 
   async function handleToggleActive(user: AdminUser) {
-    await updateAdminUser(user.id, {
-      is_active: !user.is_active,
-    });
-    await loadUsers();
+    try {
+      await updateAdminUser(user.id, {
+        is_active: !user.is_active,
+      });
+
+      await loadUsers();
+      toast.success(`User marked as ${user.is_active ? 'inactive' : 'active'}.`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update status');
+    }
   }
 
   async function handleSaveEdit() {
     if (!editingUser) return;
 
-    await updateAdminUser(editingUser.id, {
-      first_name: editingUser.first_name || null,
-      last_name: editingUser.last_name || null,
-      phone: editingUser.phone || null,
-      is_active: editingUser.is_active,
-    });
+    try {
+      setSavingEdit(true);
 
-    setEditingUser(null);
-    await loadUsers();
+      await updateAdminUser(editingUser.id, {
+        first_name: editingUser.first_name || null,
+        last_name: editingUser.last_name || null,
+        phone: editingUser.phone || null,
+        is_active: editingUser.is_active,
+      });
+
+      setEditingUser(null);
+      await loadUsers();
+      toast.success('User updated successfully.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update user');
+    } finally {
+      setSavingEdit(false);
+    }
   }
 
   async function handlePasswordChange() {
-    if (!passwordUser || !newPassword.trim()) return;
+    if (!passwordUser) return;
 
-    await changeAdminUserPassword(passwordUser.id, newPassword);
+    if (newPassword.trim().length < 6) {
+      toast.error('Password must be at least 6 characters.');
+      return;
+    }
 
-    setPasswordUser(null);
-    setNewPassword('');
-    alert('Password changed successfully');
+    try {
+      setChangingPassword(true);
+
+      await changeAdminUserPassword(passwordUser.id, newPassword);
+
+      setPasswordUser(null);
+      setNewPassword('');
+      toast.success('Password changed successfully.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
   }
 
   async function handleDelete(user: AdminUser) {
     if (user.role === 'admin') {
-      alert('Admin users cannot be deleted.');
+      toast.error('Admin users cannot be deleted.');
       return;
     }
 
     if (!confirm(`Delete ${user.email}?`)) return;
 
-    await deleteAdminUser(user.id);
-    await loadUsers();
+    try {
+      await deleteAdminUser(user.id);
+      await loadUsers();
+      toast.success('User deleted successfully.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete user');
+    }
   }
 
   return (
@@ -163,13 +213,11 @@ export default function AdminUsersPage() {
             <button className={darkButtonClass} onClick={() => setShowCreateModal(true)}>
               + Add User
             </button>
-            <button className={darkButtonClass} onClick={loadUsers}>
+            <button className={darkButtonClass} onClick={() => loadUsers(true)}>
               Refresh
             </button>
           </div>
         </div>
-
-        {error && <div className="error-box">{error}</div>}
 
         {loading ? (
           <div className="py-8 text-center text-slate-500">Loading users...</div>
@@ -414,8 +462,8 @@ export default function AdminUsersPage() {
               <button className={buttonClass} onClick={() => setEditingUser(null)}>
                 Cancel
               </button>
-              <button className={darkButtonClass} onClick={handleSaveEdit}>
-                Save
+              <button className={darkButtonClass} onClick={handleSaveEdit} disabled={savingEdit}>
+                {savingEdit ? 'Saving...' : 'Save'}
               </button>
             </div>
           </div>
@@ -448,8 +496,8 @@ export default function AdminUsersPage() {
               >
                 Cancel
               </button>
-              <button className={darkButtonClass} onClick={handlePasswordChange}>
-                Change Password
+              <button className={darkButtonClass} onClick={handlePasswordChange} disabled={changingPassword}>
+                {changingPassword ? 'Changing...' : 'Change Password'}
               </button>
             </div>
           </div>

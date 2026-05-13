@@ -9,6 +9,9 @@ import {
   Lock,
   Settings,
   Users,
+  Images,
+  LayoutDashboard,
+  UserCircle,
 } from 'lucide-react';
 
 interface Props {
@@ -26,7 +29,7 @@ export default function Sidebar({ isOpen }: Props) {
 
       <div className="guru-folder-list">
         <NavLink to="/admin/dashboard" className="guru-folder-item">
-          <Folder size={16} />
+          <LayoutDashboard size={16} />
           <span>Dashboard</span>
         </NavLink>
         <NavLink to="/admin/users" className="guru-folder-item">
@@ -34,8 +37,12 @@ export default function Sidebar({ isOpen }: Props) {
           <span>Users</span>
         </NavLink>
         <NavLink to="/admin/profile" className="guru-folder-item">
-          <Folder size={16} />
+          <UserCircle size={16} />
           <span>Profile</span>
+        </NavLink>
+        <NavLink to="/admin/media" className="guru-folder-item">
+          <Images size={16} />
+          <span>Media</span>
         </NavLink>
       </div>
 

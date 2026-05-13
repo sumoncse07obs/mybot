@@ -21,6 +21,8 @@ import UserAppLayout from '@/components/user/template/AppLayout';
 import UserDashboard from '@/components/user/UserDashboard';
 import UserProfileRoutes from '@/components/user/module/profile';
 
+import MediaRoutes from '@/components/shared/media';
+
 export default function App() {
   return (
     <Routes>
@@ -58,6 +60,7 @@ export default function App() {
         <Route path="dashboard" element={<AdminDashboard />} />
         <Route path="users/*" element={<AdminUserRoutes />} />
         <Route path="profile/*" element={<AdminProfileRoutes />} />
+        <Route path="media/*" element={<MediaRoutes />} />
       </Route>
 
       <Route
@@ -71,6 +74,7 @@ export default function App() {
         <Route index element={<Navigate to="/customer/dashboard" replace />} />
         <Route path="dashboard" element={<CustomerDashboard />} />
         <Route path="profile/*" element={<CustomerProfileRoutes />} />
+        <Route path="media/*" element={<MediaRoutes />} />
       </Route>
 
       <Route
@@ -84,6 +88,7 @@ export default function App() {
         <Route index element={<Navigate to="/user/dashboard" replace />} />
         <Route path="dashboard" element={<UserDashboard />} />
         <Route path="profile/*" element={<UserProfileRoutes />} />
+        <Route path="media/*" element={<MediaRoutes />} />
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
