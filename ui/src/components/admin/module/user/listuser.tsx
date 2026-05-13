@@ -30,6 +30,14 @@ const emptyCreateForm: CreateUserForm = {
   is_active: true,
 };
 
+const inputClass =
+  'min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10';
+const labelClass = 'grid gap-2 text-sm font-bold text-slate-700';
+const buttonClass =
+  'inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-300 bg-white px-4 text-sm font-extrabold text-slate-900 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60';
+const darkButtonClass =
+  'inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-950 bg-slate-950 px-4 text-sm font-extrabold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60';
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,23 +151,19 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="dashboard-page">
-      <div className="admin-panel">
-        <div className="admin-panel-header">
+    <div className="grid gap-6">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2>Users</h2>
-            <p>{users.length} total users</p>
+            <h2 className="text-2xl font-bold text-slate-950">Users</h2>
+            <p className="mt-1 text-sm text-slate-500">{users.length} total users</p>
           </div>
 
-          <div className="table-actions">
-            <button
-              className="admin-btn admin-btn-dark"
-              onClick={() => setShowCreateModal(true)}
-            >
+          <div className="flex flex-wrap gap-3">
+            <button className={darkButtonClass} onClick={() => setShowCreateModal(true)}>
               + Add User
             </button>
-
-            <button className="admin-btn admin-btn-dark" onClick={loadUsers}>
+            <button className={darkButtonClass} onClick={loadUsers}>
               Refresh
             </button>
           </div>
@@ -168,41 +172,39 @@ export default function AdminUsersPage() {
         {error && <div className="error-box">{error}</div>}
 
         {loading ? (
-          <div className="admin-empty">Loading users...</div>
+          <div className="py-8 text-center text-slate-500">Loading users...</div>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
               <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Email</th>
-                  <th>Phone</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                <tr className="bg-slate-50 text-left text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                  <th className="p-4">User</th>
+                  <th className="p-4">Email</th>
+                  <th className="p-4">Phone</th>
+                  <th className="p-4">Role</th>
+                  <th className="p-4">Status</th>
+                  <th className="p-4">Actions</th>
                 </tr>
               </thead>
 
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id}>
-                    <td>
-                      <strong>
+                  <tr key={user.id} className="border-t border-slate-200 hover:bg-slate-50/80">
+                    <td className="p-4 align-middle">
+                      <strong className="block text-slate-950">
                         {user.first_name || ''} {user.last_name || ''}
                       </strong>
-                      <small>ID: {user.id}</small>
+                      <small className="mt-1 block text-slate-500">ID: {user.id}</small>
                     </td>
 
-                    <td>{user.email}</td>
-                    <td>{user.phone || '-'}</td>
+                    <td className="p-4 align-middle text-slate-700">{user.email}</td>
+                    <td className="p-4 align-middle text-slate-700">{user.phone || '-'}</td>
 
-                    <td>
+                    <td className="p-4 align-middle">
                       <select
-                        className="admin-select"
+                        className="min-h-9 rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold outline-none focus:border-blue-500"
                         value={user.role}
-                        onChange={(e) =>
-                          handleRoleChange(user.id, e.target.value as Role)
-                        }
+                        onChange={(event) => handleRoleChange(user.id, event.target.value as Role)}
                       >
                         <option value="admin">Admin</option>
                         <option value="customer">Customer</option>
@@ -210,26 +212,31 @@ export default function AdminUsersPage() {
                       </select>
                     </td>
 
-                    <td>
+                    <td className="p-4 align-middle">
                       <button
-                        className={user.is_active ? 'status active' : 'status inactive'}
+                        className={`rounded-full px-3 py-2 text-xs font-black ${
+                          user.is_active
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : 'bg-red-50 text-red-700'
+                        }`}
                         onClick={() => handleToggleActive(user)}
                       >
                         {user.is_active ? 'Active' : 'Inactive'}
                       </button>
                     </td>
 
-                    <td>
-                      <div className="table-actions">
-                        <button className="admin-btn" onClick={() => setEditingUser(user)}>
+                    <td className="p-4 align-middle">
+                      <div className="flex flex-wrap gap-2">
+                        <button className={buttonClass} onClick={() => setEditingUser(user)}>
                           Edit
                         </button>
-
-                        <button className="admin-btn" onClick={() => setPasswordUser(user)}>
+                        <button className={buttonClass} onClick={() => setPasswordUser(user)}>
                           Password
                         </button>
-
-                        <button className="admin-btn danger" onClick={() => handleDelete(user)}>
+                        <button
+                          className="inline-flex min-h-10 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-extrabold text-red-700 transition hover:bg-red-100"
+                          onClick={() => handleDelete(user)}
+                        >
                           Delete
                         </button>
                       </div>
@@ -239,8 +246,8 @@ export default function AdminUsersPage() {
 
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={6}>
-                      <div className="admin-empty">No users found.</div>
+                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                      No users found.
                     </td>
                   </tr>
                 )}
@@ -248,100 +255,95 @@ export default function AdminUsersPage() {
             </table>
           </div>
         )}
-      </div>
+      </section>
 
       {showCreateModal && (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <h2>Add User</h2>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-5">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 className="text-2xl font-bold text-slate-950">Add User</h2>
 
-            <label>
-              First Name
-              <input
-                value={createForm.first_name}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, first_name: e.target.value })
-                }
-              />
-            </label>
+            <div className="mt-5 grid gap-4">
+              <label className={labelClass}>
+                First Name
+                <input
+                  className={inputClass}
+                  value={createForm.first_name}
+                  onChange={(event) => setCreateForm({ ...createForm, first_name: event.target.value })}
+                />
+              </label>
 
-            <label>
-              Last Name
-              <input
-                value={createForm.last_name}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, last_name: e.target.value })
-                }
-              />
-            </label>
+              <label className={labelClass}>
+                Last Name
+                <input
+                  className={inputClass}
+                  value={createForm.last_name}
+                  onChange={(event) => setCreateForm({ ...createForm, last_name: event.target.value })}
+                />
+              </label>
 
-            <label>
-              Email
-              <input
-                type="email"
-                value={createForm.email}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, email: e.target.value })
-                }
-              />
-            </label>
+              <label className={labelClass}>
+                Email
+                <input
+                  className={inputClass}
+                  type="email"
+                  value={createForm.email}
+                  onChange={(event) => setCreateForm({ ...createForm, email: event.target.value })}
+                />
+              </label>
 
-            <label>
-              Phone
-              <input
-                value={createForm.phone}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, phone: e.target.value })
-                }
-              />
-            </label>
+              <label className={labelClass}>
+                Phone
+                <input
+                  className={inputClass}
+                  value={createForm.phone}
+                  onChange={(event) => setCreateForm({ ...createForm, phone: event.target.value })}
+                />
+              </label>
 
-            <label>
-              Password
-              <input
-                type="password"
-                value={createForm.password}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, password: e.target.value })
-                }
-              />
-            </label>
+              <label className={labelClass}>
+                Password
+                <input
+                  className={inputClass}
+                  type="password"
+                  value={createForm.password}
+                  onChange={(event) => setCreateForm({ ...createForm, password: event.target.value })}
+                />
+              </label>
 
-            <label>
-              Role
-              <select
-                className="admin-select"
-                value={createForm.role}
-                onChange={(e) =>
-                  setCreateForm({ ...createForm, role: e.target.value as Role })
-                }
-              >
-                <option value="admin">Admin</option>
-                <option value="customer">Customer</option>
-                <option value="user">User</option>
-              </select>
-            </label>
+              <label className={labelClass}>
+                Role
+                <select
+                  className={inputClass}
+                  value={createForm.role}
+                  onChange={(event) => setCreateForm({ ...createForm, role: event.target.value as Role })}
+                >
+                  <option value="admin">Admin</option>
+                  <option value="customer">Customer</option>
+                  <option value="user">User</option>
+                </select>
+              </label>
 
-            <label>
-              Status
-              <select
-                className="admin-select"
-                value={createForm.is_active ? 'active' : 'inactive'}
-                onChange={(e) =>
-                  setCreateForm({
-                    ...createForm,
-                    is_active: e.target.value === 'active',
-                  })
-                }
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </label>
+              <label className={labelClass}>
+                Status
+                <select
+                  className={inputClass}
+                  value={createForm.is_active ? 'active' : 'inactive'}
+                  onChange={(event) =>
+                    setCreateForm({
+                      ...createForm,
+                      is_active: event.target.value === 'active',
+                    })
+                  }
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </label>
+            </div>
 
-            <div className="modal-actions">
+            <div className="mt-6 flex justify-end gap-3">
               <button
-                className="admin-btn"
+                className={buttonClass}
                 onClick={() => {
                   setShowCreateModal(false);
                   setCreateForm(emptyCreateForm);
@@ -349,12 +351,7 @@ export default function AdminUsersPage() {
               >
                 Cancel
               </button>
-
-              <button
-                className="admin-btn admin-btn-dark"
-                onClick={handleCreateUser}
-                disabled={creating}
-              >
+              <button className={darkButtonClass} onClick={handleCreateUser} disabled={creating}>
                 {creating ? 'Creating...' : 'Create User'}
               </button>
             </div>
@@ -363,63 +360,61 @@ export default function AdminUsersPage() {
       )}
 
       {editingUser && (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <h2>Edit User</h2>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-5">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 className="text-2xl font-bold text-slate-950">Edit User</h2>
 
-            <label>
-              First Name
-              <input
-                value={editingUser.first_name || ''}
-                onChange={(e) =>
-                  setEditingUser({ ...editingUser, first_name: e.target.value })
-                }
-              />
-            </label>
+            <div className="mt-5 grid gap-4">
+              <label className={labelClass}>
+                First Name
+                <input
+                  className={inputClass}
+                  value={editingUser.first_name || ''}
+                  onChange={(event) => setEditingUser({ ...editingUser, first_name: event.target.value })}
+                />
+              </label>
 
-            <label>
-              Last Name
-              <input
-                value={editingUser.last_name || ''}
-                onChange={(e) =>
-                  setEditingUser({ ...editingUser, last_name: e.target.value })
-                }
-              />
-            </label>
+              <label className={labelClass}>
+                Last Name
+                <input
+                  className={inputClass}
+                  value={editingUser.last_name || ''}
+                  onChange={(event) => setEditingUser({ ...editingUser, last_name: event.target.value })}
+                />
+              </label>
 
-            <label>
-              Phone
-              <input
-                value={editingUser.phone || ''}
-                onChange={(e) =>
-                  setEditingUser({ ...editingUser, phone: e.target.value })
-                }
-              />
-            </label>
+              <label className={labelClass}>
+                Phone
+                <input
+                  className={inputClass}
+                  value={editingUser.phone || ''}
+                  onChange={(event) => setEditingUser({ ...editingUser, phone: event.target.value })}
+                />
+              </label>
 
-            <label>
-              Status
-              <select
-                className="admin-select"
-                value={editingUser.is_active ? 'active' : 'inactive'}
-                onChange={(e) =>
-                  setEditingUser({
-                    ...editingUser,
-                    is_active: e.target.value === 'active',
-                  })
-                }
-              >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-            </label>
+              <label className={labelClass}>
+                Status
+                <select
+                  className={inputClass}
+                  value={editingUser.is_active ? 'active' : 'inactive'}
+                  onChange={(event) =>
+                    setEditingUser({
+                      ...editingUser,
+                      is_active: event.target.value === 'active',
+                    })
+                  }
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </label>
+            </div>
 
-            <div className="modal-actions">
-              <button className="admin-btn" onClick={() => setEditingUser(null)}>
+            <div className="mt-6 flex justify-end gap-3">
+              <button className={buttonClass} onClick={() => setEditingUser(null)}>
                 Cancel
               </button>
-
-              <button className="admin-btn admin-btn-dark" onClick={handleSaveEdit}>
+              <button className={darkButtonClass} onClick={handleSaveEdit}>
                 Save
               </button>
             </div>
@@ -428,23 +423,24 @@ export default function AdminUsersPage() {
       )}
 
       {passwordUser && (
-        <div className="modal-backdrop">
-          <div className="modal-card">
-            <h2>Change Password</h2>
-            <p>{passwordUser.email}</p>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/55 p-5">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 className="text-2xl font-bold text-slate-950">Change Password</h2>
+            <p className="mt-1 text-sm text-slate-500">{passwordUser.email}</p>
 
-            <label>
+            <label className={`${labelClass} mt-5`}>
               New Password
               <input
+                className={inputClass}
                 type="password"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={(event) => setNewPassword(event.target.value)}
               />
             </label>
 
-            <div className="modal-actions">
+            <div className="mt-6 flex justify-end gap-3">
               <button
-                className="admin-btn"
+                className={buttonClass}
                 onClick={() => {
                   setPasswordUser(null);
                   setNewPassword('');
@@ -452,7 +448,7 @@ export default function AdminUsersPage() {
               >
                 Cancel
               </button>
-              <button className="admin-btn admin-btn-dark" onClick={handlePasswordChange}>
+              <button className={darkButtonClass} onClick={handlePasswordChange}>
                 Change Password
               </button>
             </div>

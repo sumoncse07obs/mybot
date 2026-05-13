@@ -13,11 +13,11 @@ export default function UserAppLayout() {
   }
 
   return (
-    <div className="app-shell">
+    <div className="grid min-h-screen grid-cols-1 bg-slate-50 lg:grid-cols-[260px_minmax(0,1fr)]">
       <Sidebar />
-      <main className="main-area">
+      <main className="min-w-0">
         <Topbar user={user} onLogout={handleLogout} />
-        <section className="content-area">
+        <section className="p-5 lg:p-7">
           <Outlet />
         </section>
       </main>

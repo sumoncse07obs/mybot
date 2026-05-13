@@ -6,6 +6,16 @@ export interface UpdateProfilePayload {
   first_name?: string | null;
   last_name?: string | null;
   phone?: string | null;
+
+  avatar?: string | null;
+  country?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  address?: string | null;
+  company_name?: string | null;
+  website?: string | null;
+  bio?: string | null;
 }
 
 export interface ChangePasswordPayload {
