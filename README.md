@@ -1,2 +1,2 @@
-# mybot
+# fastapi+react admin
 
