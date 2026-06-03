@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.controller.chat_controller import resolve_openai_key
 from app.models.resource_chunk_model import ResourceChunk
 from app.models.resource_model import Resource
 from app.models.user_model import User
@@ -30,6 +31,7 @@ async def get_owned_resource(resource_id: int, db: AsyncSession, current_user: U
 
 async def index_resource(resource_id: int, db: AsyncSession, current_user: User):
     resource = await get_owned_resource(resource_id, db, current_user)
+    openai_key = resolve_openai_key(current_user)
 
     text = extract_resource_text(resource)
     chunks = split_text_into_chunks(text)
@@ -37,7 +39,7 @@ async def index_resource(resource_id: int, db: AsyncSession, current_user: User)
     if not chunks:
         raise HTTPException(status_code=400, detail="No indexable text found")
 
-    embeddings = await create_embeddings(chunks)
+    embeddings = await create_embeddings(chunks, openai_key)
 
     await db.execute(delete(ResourceChunk).where(ResourceChunk.resource_id == resource.id))
 
@@ -96,7 +98,8 @@ async def search_resource_chunks(
     if not query.strip():
         raise HTTPException(status_code=400, detail="Query is required")
 
-    query_embedding = await create_embedding(query)
+    openai_key = resolve_openai_key(current_user)
+    query_embedding = await create_embedding(query, openai_key)
 
     distance = ResourceChunk.embedding.cosine_distance(query_embedding)
 

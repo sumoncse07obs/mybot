@@ -57,16 +57,13 @@ async def resolve_api_key_owner(api_key: ApiKey, db: AsyncSession) -> User:
 
 
 def resolve_openai_key(user: User) -> str:
-    if user.openai_api_key:
-        try:
-            return decrypt_secret(user.openai_api_key)
-        except ValueError:
-            raise HTTPException(status_code=422, detail="Stored OpenAI key could not be decrypted")
+    if not user.openai_api_key:
+        raise HTTPException(status_code=422, detail="OpenAI API key is not configured for this account")
 
-    if settings.OPENAI_API_KEY:
-        return settings.OPENAI_API_KEY
-
-    raise HTTPException(status_code=500, detail="OpenAI API key is not configured")
+    try:
+        return decrypt_secret(user.openai_api_key)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Stored OpenAI key could not be decrypted")
 
 
 async def retrieve_context(
@@ -74,8 +71,9 @@ async def retrieve_context(
     owner: User,
     db: AsyncSession,
     limit: int,
+    openai_key: str,
 ) -> list[dict]:
-    query_embedding = await create_embedding(message)
+    query_embedding = await create_embedding(message, openai_key)
     distance = ResourceChunk.embedding.cosine_distance(query_embedding)
 
     result = await db.execute(
@@ -193,6 +191,7 @@ async def resolve_conversation(data: ChatRequest, api_key: ApiKey, owner: User, 
 
     return conversation
 
+
 async def load_recent_messages(conversation_id: int, db: AsyncSession, limit: int = 8) -> list[dict]:
     result = await db.execute(
         select(ChatMessage)
@@ -235,6 +234,7 @@ async def chat_with_api_key(data: ChatRequest, db: AsyncSession):
         owner=owner,
         db=db,
         limit=data.limit,
+        openai_key=openai_key,
     )
 
     system_prompt = build_system_prompt(

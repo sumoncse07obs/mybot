@@ -33,9 +33,6 @@ export default function LoginPage() {
       <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
         <div className="mb-6">
           <h1 className="text-4xl font-bold tracking-tight text-slate-950">Login</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Sign in with an admin, customer, or user account.
-          </p>
         </div>
 
         {error && <div className="error-box">{error}</div>}

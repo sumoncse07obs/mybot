@@ -23,6 +23,8 @@ type ProfileForm = {
   company_name: string;
   website: string;
   bio: string;
+  system_prompt: string;
+  openai_api_key: string;
 };
 
 const inputClass =
@@ -52,6 +54,8 @@ function buildForm(user: AuthUser | null): ProfileForm {
     company_name: getUserField(user, 'company_name'),
     website: getUserField(user, 'website'),
     bio: getUserField(user, 'bio'),
+    system_prompt: getUserField(user, 'system_prompt'),
+    openai_api_key: '',
   };
 }
 
@@ -71,6 +75,7 @@ export default function EditUserProfile() {
   const [loading, setLoading] = useState(true);
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
+  const [savingAiSettings, setSavingAiSettings] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
   function syncForm(nextUser: AuthUser | null) {
@@ -149,6 +154,24 @@ export default function EditUserProfile() {
       },
       'Meta information updated successfully.',
       setSavingMeta,
+    );
+  }
+
+  async function handleSaveAiSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const payload: UpdateProfilePayload = {
+      system_prompt: nullable(form.system_prompt),
+    };
+
+    if (form.openai_api_key.trim()) {
+      payload.openai_api_key = form.openai_api_key.trim();
+    }
+
+    await saveProfile(
+      payload,
+      'AI settings updated successfully.',
+      setSavingAiSettings,
     );
   }
 
@@ -376,6 +399,58 @@ export default function EditUserProfile() {
                   disabled={savingMeta}
                 >
                   {savingMeta ? 'Saving...' : 'Save Meta'}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-slate-950">AI Settings</h2>
+              <p className="mt-1 text-sm text-slate-600">Configure your OpenAI key and default system prompt.</p>
+            </div>
+
+            <form className="space-y-6" onSubmit={handleSaveAiSettings}>
+              <label className="block text-sm font-semibold text-slate-900">
+                OpenAI API Key
+                <input
+                  className={inputClass}
+                  type="password"
+                  value={form.openai_api_key}
+                  onChange={(event) => setForm({ ...form, openai_api_key: event.target.value })}
+                  placeholder={
+                    user?.openai_api_key
+                      ? 'OpenAI key is configured. Enter a new key to replace it.'
+                      : 'OpenAI API key'
+                  }
+                  autoComplete="off"
+                />
+              </label>
+
+              <label className="block text-sm font-semibold text-slate-900">
+                System Prompt
+                <textarea
+                  className="mt-2 min-h-[180px] w-full resize-y rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
+                  value={form.system_prompt}
+                  onChange={(event) => setForm({ ...form, system_prompt: event.target.value })}
+                  placeholder="Write the default instruction for this assistant..."
+                />
+              </label>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                  onClick={() => syncForm(user)}
+                >
+                  Reset
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={savingAiSettings}
+                >
+                  {savingAiSettings ? 'Saving...' : 'Save AI Settings'}
                 </button>
               </div>
             </form>

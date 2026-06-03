@@ -59,7 +59,7 @@ function buildForm(user: AuthUser | null): ProfileForm {
     website: getUserField(user, 'website'),
     bio: getUserField(user, 'bio'),
     system_prompt: getUserField(user, 'system_prompt'),
-    openai_api_key: getUserField(user, 'openai_api_key'),
+    openai_api_key: '',
   };
 }
 
@@ -208,11 +208,16 @@ export default function EditUserProfile() {
   async function handleSaveAiSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    const payload: UpdateProfilePayload = {
+      system_prompt: nullable(form.system_prompt),
+    };
+
+    if (form.openai_api_key.trim()) {
+      payload.openai_api_key = form.openai_api_key.trim();
+    }
+
     await saveProfile(
-      {
-        system_prompt: nullable(form.system_prompt),
-        openai_api_key: nullable(form.openai_api_key),
-      },
+      payload,
       'AI settings updated successfully.',
       setSavingAiSettings,
     );
@@ -469,7 +474,11 @@ export default function EditUserProfile() {
                     type="password"
                     value={form.openai_api_key}
                     onChange={(event) => setForm({ ...form, openai_api_key: event.target.value })}
-                    placeholder="OpenAI API key"
+                    placeholder={
+                      user?.openai_api_key
+                        ? 'OpenAI key is configured. Enter a new key to replace it.'
+                        : 'OpenAI API key'
+                    }
                     autoComplete="off"
                   />
                 </label>
