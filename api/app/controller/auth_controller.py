@@ -16,6 +16,7 @@ from app.services.auth_service import (
     verify_password,
     create_access_token,
 )
+from app.services.secret_crypto import encrypt_secret, mask_secret
 
 
 def serialize_user(user: User):
@@ -39,6 +40,8 @@ def serialize_user(user: User):
         "company_name": meta.company_name if meta else None,
         "website": meta.website if meta else None,
         "bio": meta.bio if meta else None,
+        "system_prompt": user.system_prompt,
+        "openai_api_key": mask_secret(user.openai_api_key),
     }
 
 
@@ -114,7 +117,7 @@ async def update_profile(
     current_user: User,
     db: AsyncSession,
 ):
-    user_fields = ["first_name", "last_name", "phone"]
+    user_fields = ["first_name", "last_name", "phone", "system_prompt"]
     meta_fields = [
         "avatar",
         "country",
@@ -132,6 +135,10 @@ async def update_profile(
     for field in user_fields:
         if field in update_data:
             setattr(current_user, field, update_data[field])
+
+    if "openai_api_key" in update_data:
+        api_key = update_data["openai_api_key"]
+        current_user.openai_api_key = encrypt_secret(api_key) if api_key else None
 
     if any(field in update_data for field in meta_fields):
         if current_user.meta is None:
@@ -163,5 +170,3 @@ async def change_password(
     await db.commit()
 
     return {"message": "Password changed successfully"}
-
-

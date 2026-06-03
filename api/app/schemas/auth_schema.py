@@ -49,6 +49,9 @@ class UserResponse(BaseModel):
     website: Optional[str] = None
     bio: Optional[str] = None
 
+    system_prompt: Optional[str] = None
+    openai_api_key: Optional[str] = None
+
 
 class AuthResponse(BaseModel):
     access_token: str
@@ -70,6 +73,9 @@ class UpdateProfileRequest(BaseModel):
     company_name: Optional[str] = None
     website: Optional[str] = None
     bio: Optional[str] = None
+
+    system_prompt: Optional[str] = None
+    openai_api_key: Optional[str] = None
 
 
 class AdminUserListResponse(BaseModel):
@@ -94,6 +100,7 @@ class AdminUserUpdateRequest(BaseModel):
     is_active: Optional[bool] = None
     system_prompt: Optional[str] = None
     openai_api_key: Optional[str] = None
+
 
 class AdminUserCreateRequest(BaseModel):
     first_name: Optional[str] = None

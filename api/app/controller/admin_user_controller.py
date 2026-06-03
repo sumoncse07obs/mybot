@@ -65,6 +65,12 @@ async def update_user(user_id: int, data: AdminUserUpdateRequest, db: AsyncSessi
 
     update_data = data.model_dump(exclude_unset=True)
 
+    if "openai_api_key" in update_data:
+        from app.services.secret_crypto import encrypt_secret
+
+        api_key = update_data.pop("openai_api_key")
+        user.openai_api_key = encrypt_secret(api_key) if api_key else None
+
     for field, value in update_data.items():
         setattr(user, field, value)
 
@@ -72,7 +78,6 @@ async def update_user(user_id: int, data: AdminUserUpdateRequest, db: AsyncSessi
     await db.refresh(user)
 
     return user
-
 
 async def delete_user(user_id: int, db: AsyncSession):
     user = await get_user(user_id, db)

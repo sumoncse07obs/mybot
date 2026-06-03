@@ -22,12 +22,19 @@ import UserDashboard from '@/components/user/UserDashboard';
 import UserProfileRoutes from '@/components/user/module/profile';
 
 import MediaRoutes from '@/components/shared/media';
+import AdminResourceRoutes from '@/components/admin/module/resources';
+import CustomerResourceRoutes from '@/components/customer/module/resources';
+import ApiKeysModule from '@/components/customer/module/apikeys';
+import WidgetInstallModule from '@/components/customer/module/widget-install';
+import WidgetChatPage from '@/components/public/WidgetChatPage';
+
+import HistoryModule from '@/components/customer/module/history';
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
-
+      <Route path="/widget" element={<WidgetChatPage />} />
       <Route
         path="/login"
         element={
@@ -61,6 +68,8 @@ export default function App() {
         <Route path="users/*" element={<AdminUserRoutes />} />
         <Route path="profile/*" element={<AdminProfileRoutes />} />
         <Route path="media/*" element={<MediaRoutes />} />
+        <Route path="resources/*" element={<AdminResourceRoutes />} />
+        
       </Route>
 
       <Route
@@ -75,6 +84,10 @@ export default function App() {
         <Route path="dashboard" element={<CustomerDashboard />} />
         <Route path="profile/*" element={<CustomerProfileRoutes />} />
         <Route path="media/*" element={<MediaRoutes />} />
+        <Route path="resources/*" element={<CustomerResourceRoutes />} />
+        <Route path="apikeys/*" element={<ApiKeysModule />} />
+        <Route path="widget-install/*" element={<WidgetInstallModule />} />
+        <Route path="history/*" element={<HistoryModule />} />
       </Route>
 
       <Route
@@ -92,6 +105,7 @@ export default function App() {
       </Route>
 
       <Route path="*" element={<NotFoundPage />} />
+
     </Routes>
   );
 }

@@ -44,15 +44,12 @@ export default function Sidebar({ isOpen }: Props) {
           <Images size={16} />
           <span>Media</span>
         </NavLink>
+        <NavLink to="/admin/resources" className="guru-folder-item">
+          <BookOpen size={16} />
+          <span>Resources</span>
+        </NavLink>
       </div>
 
-      <div className="guru-sidebar-card compact">
-        <Clock size={30} />
-        <div>
-          <strong>System</strong>
-          <span>Monitor Platform</span>
-        </div>
-      </div>
     </aside>
   );
 }

@@ -33,6 +33,14 @@ async def get_current_user(
                 detail="Invalid token",
             )
 
+        try:
+            user_id = int(user_id)
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+            )
+
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -42,7 +50,7 @@ async def get_current_user(
     result = await db.execute(
         select(User)
         .options(selectinload(User.meta))
-        .where(User.id == int(user_id))
+        .where(User.id == user_id)
     )
     user = result.scalar_one_or_none()
 
@@ -66,6 +74,16 @@ async def require_admin(current_user: User = Depends(get_current_user)) -> User:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
+        )
+
+    return current_user
+
+
+async def require_resource_owner(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in {"admin", "customer", "user"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Resource access required",
         )
 
     return current_user

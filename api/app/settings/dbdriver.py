@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
 
+    OPENAI_API_KEY: str = ""
+    CHAT_MODEL: str = "gpt-4o-mini"
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_DIMENSIONS: int = 1536
+    OPENAI_KEY_ENCRYPTION_SECRET: str
+
     @property
     def DATABASE_URL(self) -> str:
         return (

@@ -9,6 +9,19 @@ export interface AuthUser {
   role: Role;
   is_active: boolean;
   created_at?: string;
+
+  avatar?: string | null;
+  country?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip?: string | null;
+  address?: string | null;
+  company_name?: string | null;
+  website?: string | null;
+  bio?: string | null;
+
+  system_prompt?: string | null;
+  openai_api_key?: string | null;
 }
 
 export interface AuthResponse {

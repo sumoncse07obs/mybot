@@ -70,8 +70,8 @@ export default function Topbar({ user, onLogout, onToggleSidebar }: Props) {
         </button>
         
         <Link to="/admin/dashboard" className="guru-logo" aria-label="Admin dashboard">
-          <span className="guru-logo-blue">My</span>
-          <span className="guru-logo-green">admin</span>
+          <span className="guru-logo-blue">Bot</span>
+          <span className="guru-logo-green">&nbsp;Admin</span>
         </Link>
       </div>
 

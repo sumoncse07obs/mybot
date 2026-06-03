@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { login, dashboardPathForRole, saveAuth } from '@/api/auth/auth';
 
@@ -7,6 +8,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -52,13 +54,23 @@ export default function LoginPage() {
 
           <label className="grid gap-2 text-sm font-bold text-slate-700">
             Password
-            <input
-              className="h-12 rounded-2xl border border-slate-300 px-4 text-[15px] outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              type="password"
-              required
-            />
+            <div className="relative">
+              <input
+                className="h-12 w-full rounded-2xl border border-slate-300 px-4 pr-12 text-[15px] outline-none transition focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                type={showPassword ? 'text' : 'password'}
+                required
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-full p-1 text-blue-600 transition hover:bg-blue-50 hover:text-blue-700"
+                onClick={() => setShowPassword((current) => !current)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </label>
 
           <button

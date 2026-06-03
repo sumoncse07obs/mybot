@@ -16,6 +16,9 @@ export interface UpdateProfilePayload {
   company_name?: string | null;
   website?: string | null;
   bio?: string | null;
+
+  system_prompt?: string | null;
+  openai_api_key?: string | null;
 }
 
 export interface ChangePasswordPayload {
