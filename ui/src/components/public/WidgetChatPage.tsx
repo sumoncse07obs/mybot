@@ -9,6 +9,15 @@ type ChatMessage = {
   content: string;
 };
 
+type ChatVisitor = {
+  id: number;
+  external_user_id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+};
+
 type ChatResponse = {
   answer: string;
   api_key_id: number;
@@ -16,15 +25,33 @@ type ChatResponse = {
   display_name?: string | null;
   avatar_url?: string | null;
   welcome_message?: string | null;
+  visitor?: ChatVisitor | null;
 };
 
 const DEFAULT_VOICE = 'marin';
+const VISITOR_STORAGE_PREFIX = 'botapi_widget_visitor_';
 
 function initialMessage(welcomeMessage?: string | null): ChatMessage {
   return {
     role: 'assistant',
     content: welcomeMessage || 'Hi! How can I help you today?',
   };
+}
+
+function createVisitorId() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return `visitor_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
+
+function getStoredVisitorId(apiKey: string) {
+  const storageKey = `${VISITOR_STORAGE_PREFIX}${apiKey.slice(-12)}`;
+  const existing = localStorage.getItem(storageKey);
+
+  if (existing) return existing;
+
+  const created = createVisitorId();
+  localStorage.setItem(storageKey, created);
+  return created;
 }
 
 function getSupportedRecordingMimeType() {
@@ -40,7 +67,14 @@ function filenameForMimeType(mimeType: string) {
 export default function WidgetChatPage() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const apiKey = params.get('api_key')?.trim() || '';
-  const externalUserId = params.get('external_user_id')?.trim() || 'anonymous';
+  const externalUserId = useMemo(() => {
+    const explicitId = params.get('external_user_id')?.trim();
+
+    if (explicitId) return explicitId;
+    if (!apiKey) return 'anonymous';
+
+    return getStoredVisitorId(apiKey);
+  }, [apiKey, params]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -63,6 +97,7 @@ export default function WidgetChatPage() {
   const [autoSpeaking, setAutoSpeaking] = useState(false);
   const [displayName, setDisplayName] = useState('Chat');
   const [welcomeMessage, setWelcomeMessage] = useState<string | null>(null);
+  const [visitor, setVisitor] = useState<ChatVisitor | null>(null);
 
   useEffect(() => {
     return () => {
@@ -121,6 +156,10 @@ export default function WidgetChatPage() {
 
       if (chatData.welcome_message) {
         setWelcomeMessage(chatData.welcome_message);
+      }
+
+      if (chatData.visitor) {
+        setVisitor(chatData.visitor);
       }
 
       setMessages((current) => [...current, { role: 'assistant', content: answer }]);
@@ -226,45 +265,45 @@ export default function WidgetChatPage() {
         }
       };
 
-      recorder.onstop = async () => {
-        stream.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-        stopMicMeter();
-        await transcribeRecording();
+      recorder.onstop = () => {
+        transcribeRecording();
       };
 
       recorder.start();
       setRecording(true);
-    } catch (err) {
+    } catch {
       setMessages((current) => [
         ...current,
         {
           role: 'assistant',
-          content: err instanceof Error ? err.message : 'Microphone permission failed.',
+          content: 'Microphone access was not allowed.',
         },
       ]);
     }
   }
 
   function stopRecording() {
-    if (!mediaRecorderRef.current || !recording) return;
+    if (!recording) return;
 
-    mediaRecorderRef.current.stop();
+    mediaRecorderRef.current?.stop();
     setRecording(false);
+    stopMicMeter();
+
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
   }
 
   async function transcribeRecording() {
-    if (!audioChunksRef.current.length || !apiKey) return;
+    const audioBlob = new Blob(audioChunksRef.current, { type: recordingMimeTypeRef.current });
+
+    if (!audioBlob.size) return;
 
     try {
       setTranscribing(true);
 
-      const mimeType = recordingMimeTypeRef.current || 'audio/webm';
-      const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
       const formData = new FormData();
-
       formData.append('api_key', apiKey);
-      formData.append('file', audioBlob, filenameForMimeType(mimeType));
+      formData.append('file', audioBlob, filenameForMimeType(recordingMimeTypeRef.current));
 
       const response = await fetch(`${API_BASE}/voice/transcribe`, {
         method: 'POST',
@@ -279,19 +318,15 @@ export default function WidgetChatPage() {
 
       const text = data?.text?.trim();
 
-      if (!text) return;
-
-      if (chatMode === 'voice') {
+      if (text) {
         await sendTextMessage(text);
-      } else {
-        setInput(text);
       }
     } catch (err) {
       setMessages((current) => [
         ...current,
         {
           role: 'assistant',
-          content: err instanceof Error ? err.message : 'Voice transcription failed.',
+          content: err instanceof Error ? err.message : 'Failed to transcribe voice.',
         },
       ]);
     } finally {
@@ -301,63 +336,49 @@ export default function WidgetChatPage() {
   }
 
   async function playTextAudio(text: string, index: number | null) {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
+    if (!text.trim() || autoSpeaking) return;
 
     try {
-      if (index !== null) {
-        setSpeakingIndex(index);
-      } else {
-        setAutoSpeaking(true);
+      setAutoSpeaking(true);
+      setSpeakingIndex(index);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
       }
 
       const response = await fetch(`${API_BASE}/voice/speech`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          api_key: apiKey,
-          text,
-          voice: DEFAULT_VOICE,
-          instructions: 'Speak clearly in a warm, helpful customer support tone.',
-        }),
+        body: JSON.stringify({ api_key: apiKey, text, voice: DEFAULT_VOICE }),
       });
 
       if (!response.ok) {
-        const data = (await response.json().catch(() => null)) as { detail?: string } | null;
-        throw new Error(data?.detail || 'Speech generation failed');
+        throw new Error('Speech generation failed');
       }
 
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
 
       audioRef.current = audio;
 
       audio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
+        URL.revokeObjectURL(url);
         setSpeakingIndex(null);
         setAutoSpeaking(false);
       };
 
       audio.onerror = () => {
-        URL.revokeObjectURL(audioUrl);
+        URL.revokeObjectURL(url);
         setSpeakingIndex(null);
         setAutoSpeaking(false);
       };
 
       await audio.play();
-    } catch (err) {
+    } catch {
       setSpeakingIndex(null);
       setAutoSpeaking(false);
-      setMessages((current) => [
-        ...current,
-        {
-          role: 'assistant',
-          content: err instanceof Error ? err.message : 'Speech playback failed.',
-        },
-      ]);
     }
   }
 
@@ -435,7 +456,7 @@ export default function WidgetChatPage() {
           <div className="min-w-0">
             <div className="truncate text-sm font-black">{displayName}</div>
             <div className="text-xs text-white/70">
-              {conversationId ? `Chat #${conversationId}` : 'New chat'}
+              {visitor?.name ? visitor.name : conversationId ? `Chat #${conversationId}` : 'New chat'}
               {autoSpeaking ? ' - Speaking' : ''}
             </div>
           </div>

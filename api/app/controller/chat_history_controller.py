@@ -8,6 +8,21 @@ from app.models.api_key_model import ApiKey
 from app.models.chat_conversation_model import ChatConversation
 from app.models.chat_message_model import ChatMessage
 from app.models.user_model import User
+from app.models.visitor_model import Visitor
+
+
+def serialize_visitor(visitor: Visitor | None) -> dict | None:
+    if visitor is None:
+        return None
+
+    return {
+        "id": visitor.id,
+        "external_user_id": visitor.external_user_id,
+        "name": visitor.name,
+        "email": visitor.email,
+        "phone": visitor.phone,
+        "notes": visitor.notes,
+    }
 
 
 async def list_chat_history(
@@ -30,19 +45,24 @@ async def list_chat_history(
                 ChatConversation.title.ilike(term),
                 ApiKey.name.ilike(term),
                 ApiKey.display_name.ilike(term),
+                Visitor.name.ilike(term),
+                Visitor.email.ilike(term),
+                Visitor.phone.ilike(term),
             )
         )
 
     count_query = (
         select(func.count(ChatConversation.id))
         .join(ApiKey, ApiKey.id == ChatConversation.api_key_id)
+        .outerjoin(Visitor, Visitor.id == ChatConversation.visitor_id)
         .where(*filters)
     )
     total = await db.scalar(count_query) or 0
 
     result = await db.execute(
-        select(ChatConversation, ApiKey)
+        select(ChatConversation, ApiKey, Visitor)
         .join(ApiKey, ApiKey.id == ChatConversation.api_key_id)
+        .outerjoin(Visitor, Visitor.id == ChatConversation.visitor_id)
         .where(*filters)
         .order_by(ChatConversation.last_message_at.desc().nullslast(), ChatConversation.id.desc())
         .offset((page - 1) * per_page)
@@ -50,7 +70,7 @@ async def list_chat_history(
     )
 
     rows = []
-    for conversation, api_key in result.all():
+    for conversation, api_key, visitor in result.all():
         message_count = await db.scalar(
             select(func.count(ChatMessage.id)).where(ChatMessage.conversation_id == conversation.id)
         ) or 0
@@ -67,6 +87,7 @@ async def list_chat_history(
                 "id": conversation.id,
                 "api_key_id": conversation.api_key_id,
                 "created_by_id": conversation.created_by_id,
+                "visitor_id": conversation.visitor_id,
                 "external_user_id": conversation.external_user_id,
                 "title": conversation.title,
                 "last_message_at": conversation.last_message_at,
@@ -76,6 +97,7 @@ async def list_chat_history(
                 "last_message": last_message,
                 "api_key_name": api_key.name,
                 "display_name": api_key.display_name,
+                "visitor": serialize_visitor(visitor),
             }
         )
 
@@ -90,8 +112,9 @@ async def list_chat_history(
 
 async def get_chat_history(conversation_id: int, db: AsyncSession, current_user: User):
     result = await db.execute(
-        select(ChatConversation, ApiKey)
+        select(ChatConversation, ApiKey, Visitor)
         .join(ApiKey, ApiKey.id == ChatConversation.api_key_id)
+        .outerjoin(Visitor, Visitor.id == ChatConversation.visitor_id)
         .where(
             ChatConversation.id == conversation_id,
             ChatConversation.created_by_id == current_user.id,
@@ -102,7 +125,7 @@ async def get_chat_history(conversation_id: int, db: AsyncSession, current_user:
     if not row:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    conversation, api_key = row
+    conversation, api_key, visitor = row
 
     messages_result = await db.execute(
         select(ChatMessage)
@@ -115,6 +138,7 @@ async def get_chat_history(conversation_id: int, db: AsyncSession, current_user:
         "id": conversation.id,
         "api_key_id": conversation.api_key_id,
         "created_by_id": conversation.created_by_id,
+        "visitor_id": conversation.visitor_id,
         "external_user_id": conversation.external_user_id,
         "title": conversation.title,
         "last_message_at": conversation.last_message_at,
@@ -124,8 +148,10 @@ async def get_chat_history(conversation_id: int, db: AsyncSession, current_user:
         "last_message": messages[-1].content if messages else None,
         "api_key_name": api_key.name,
         "display_name": api_key.display_name,
+        "visitor": serialize_visitor(visitor),
         "messages": messages,
     }
+
 
 async def delete_chat_history(conversation_id: int, db: AsyncSession, current_user: User):
     result = await db.execute(

@@ -12,7 +12,8 @@ from app.models.chat_message_model import ChatMessage
 from app.models.resource_chunk_model import ResourceChunk
 from app.models.resource_model import Resource
 from app.models.user_model import User
-from app.schemas.chat_schema import ChatRequest
+from app.models.visitor_model import Visitor
+from app.schemas.chat_schema import ChatRequest, ChatVisitorPatch
 from app.services.embedding_service import create_embedding
 from app.services.secret_crypto import decrypt_secret
 from app.settings.dbdriver import settings
@@ -24,6 +25,43 @@ DEFAULT_SYSTEM_PROMPT = (
     "Use the conversation history when it helps. "
     "If the context does not contain the answer, say what you know and ask a helpful follow-up."
 )
+
+CONTACT_TOOL_NAME = "save_visitor_contact"
+
+CONTACT_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": CONTACT_TOOL_NAME,
+            "description": (
+                "Save visitor contact details only when the visitor naturally provides them "
+                "or clearly confirms them. Do not invent values."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Visitor name, if naturally provided.",
+                    },
+                    "email": {
+                        "type": "string",
+                        "description": "Visitor email address, if naturally provided.",
+                    },
+                    "phone": {
+                        "type": "string",
+                        "description": "Visitor phone number, if naturally provided.",
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Brief useful lead/support note from the conversation.",
+                    },
+                },
+                "additionalProperties": False,
+            },
+        },
+    }
+]
 
 
 async def resolve_chat_api_key(raw_key: str, db: AsyncSession) -> ApiKey:
@@ -64,6 +102,109 @@ def resolve_openai_key(user: User) -> str:
         return decrypt_secret(user.openai_api_key)
     except ValueError:
         raise HTTPException(status_code=422, detail="Stored OpenAI key could not be decrypted")
+
+
+def clean_external_user_id(value: str | None) -> str:
+    cleaned = (value or "").strip()
+    return cleaned[:150] if cleaned else "anonymous"
+
+
+def clean_text(value: str | None, max_length: int) -> str | None:
+    if value is None:
+        return None
+
+    cleaned = " ".join(value.strip().split())
+    if not cleaned:
+        return None
+
+    return cleaned[:max_length]
+
+
+def serialize_visitor(visitor: Visitor | None) -> dict | None:
+    if visitor is None:
+        return None
+
+    return {
+        "id": visitor.id,
+        "external_user_id": visitor.external_user_id,
+        "name": visitor.name,
+        "email": visitor.email,
+        "phone": visitor.phone,
+        "notes": visitor.notes,
+    }
+
+
+async def resolve_visitor(
+    api_key: ApiKey,
+    owner: User,
+    external_user_id: str,
+    db: AsyncSession,
+) -> Visitor:
+    result = await db.execute(
+        select(Visitor).where(
+            Visitor.api_key_id == api_key.id,
+            Visitor.external_user_id == external_user_id,
+        )
+    )
+    visitor = result.scalar_one_or_none()
+
+    if visitor:
+        if visitor.created_by_id is None:
+            visitor.created_by_id = owner.id
+        return visitor
+
+    visitor = Visitor(
+        api_key_id=api_key.id,
+        created_by_id=owner.id,
+        external_user_id=external_user_id,
+    )
+    db.add(visitor)
+    await db.flush()
+
+    return visitor
+
+
+def apply_visitor_patch(visitor: Visitor, patch: ChatVisitorPatch | dict | None) -> bool:
+    if patch is None:
+        return False
+
+    if isinstance(patch, ChatVisitorPatch):
+        data = patch.model_dump(exclude_unset=True)
+    else:
+        data = patch
+
+    changed = False
+
+    name = clean_text(data.get("name"), 150)
+    email = clean_text(data.get("email"), 255)
+    phone = clean_text(data.get("phone"), 80)
+    notes = clean_text(data.get("notes"), 2000)
+
+    if name and name != visitor.name:
+        visitor.name = name
+        changed = True
+
+    if email and email != visitor.email:
+        visitor.email = email
+        changed = True
+
+    if phone and phone != visitor.phone:
+        visitor.phone = phone
+        changed = True
+
+    if notes:
+        if visitor.notes:
+            if notes not in visitor.notes:
+                visitor.notes = f"{visitor.notes}\n{notes}"[:4000]
+                changed = True
+        else:
+            visitor.notes = notes
+            changed = True
+
+    if changed:
+        visitor.updated_at = datetime.utcnow()
+
+    return changed
 
 
 async def retrieve_context(
@@ -130,19 +271,34 @@ def build_context_text(matches: list[dict]) -> str:
     return "\n\n".join(blocks)
 
 
-def build_system_prompt(api_key: ApiKey, context_text: str) -> str:
+def build_visitor_text(visitor: Visitor) -> str:
+    details = [
+        f"External visitor id: {visitor.external_user_id}",
+        f"Name: {visitor.name or 'unknown'}",
+        f"Email: {visitor.email or 'unknown'}",
+        f"Phone: {visitor.phone or 'unknown'}",
+        f"Notes: {visitor.notes or 'none'}",
+    ]
+
+    return "\n".join(details)
+
+
+def build_system_prompt(api_key: ApiKey, context_text: str, visitor: Visitor) -> str:
     persona_prompt = api_key.system_prompt or DEFAULT_SYSTEM_PROMPT
 
     return "\n\n".join(
         [
             persona_prompt.strip(),
-            "Use the following knowledge base context when relevant.",
+            "Knowledge base context:",
             context_text,
-            "Rules:",
-            "- Be concise, helpful, and natural.",
-            "- Use conversation history when it is useful.",
-            "- Do not mention internal resource IDs unless the user asks.",
-            "- If the context is not enough, say so honestly.",
+            "Known visitor information:",
+            build_visitor_text(visitor),
+            "Available capability:",
+            (
+                "When the visitor naturally provides or confirms contact information, "
+                f"use the {CONTACT_TOOL_NAME} tool to save it. "
+                "Do not ask for contact information unless the system prompt or knowledge base makes it useful."
+            ),
         ]
     )
 
@@ -156,9 +312,13 @@ def make_conversation_title(message: str) -> str:
     return title or "New conversation"
 
 
-async def resolve_conversation(data: ChatRequest, api_key: ApiKey, owner: User, db: AsyncSession) -> ChatConversation:
-    external_user_id = (data.external_user_id or "anonymous").strip() or "anonymous"
-
+async def resolve_conversation(
+    data: ChatRequest,
+    api_key: ApiKey,
+    owner: User,
+    visitor: Visitor,
+    db: AsyncSession,
+) -> ChatConversation:
     if data.conversation_id:
         try:
             conversation_id = int(data.conversation_id)
@@ -176,12 +336,15 @@ async def resolve_conversation(data: ChatRequest, api_key: ApiKey, owner: User, 
             conversation = result.scalar_one_or_none()
 
             if conversation:
+                if conversation.visitor_id is None:
+                    conversation.visitor_id = visitor.id
                 return conversation
 
     conversation = ChatConversation(
         api_key_id=api_key.id,
         created_by_id=owner.id,
-        external_user_id=external_user_id,
+        visitor_id=visitor.id,
+        external_user_id=visitor.external_user_id,
         title=make_conversation_title(data.message),
         last_message_at=datetime.utcnow(),
     )
@@ -211,12 +374,35 @@ async def load_recent_messages(conversation_id: int, db: AsyncSession, limit: in
     ]
 
 
+async def run_chat_completion(
+    client: AsyncOpenAI,
+    api_key: ApiKey,
+    messages: list[dict],
+    use_tools: bool,
+):
+    kwargs = {
+        "model": settings.CHAT_MODEL,
+        "temperature": api_key.temperature,
+        "messages": messages,
+    }
+
+    if use_tools:
+        kwargs["tools"] = CONTACT_TOOLS
+        kwargs["tool_choice"] = "auto"
+
+    return await client.chat.completions.create(**kwargs)
+
+
 async def chat_with_api_key(data: ChatRequest, db: AsyncSession):
     api_key = await resolve_chat_api_key(data.api_key, db)
     owner = await resolve_api_key_owner(api_key, db)
     openai_key = resolve_openai_key(owner)
 
-    conversation = await resolve_conversation(data, api_key, owner, db)
+    external_user_id = clean_external_user_id(data.external_user_id)
+    visitor = await resolve_visitor(api_key, owner, external_user_id, db)
+    apply_visitor_patch(visitor, data.visitor)
+
+    conversation = await resolve_conversation(data, api_key, owner, visitor, db)
     recent_messages = await load_recent_messages(conversation.id, db)
 
     user_message = ChatMessage(
@@ -240,21 +426,48 @@ async def chat_with_api_key(data: ChatRequest, db: AsyncSession):
     system_prompt = build_system_prompt(
         api_key=api_key,
         context_text=build_context_text(matches),
+        visitor=visitor,
     )
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        *recent_messages,
+        {"role": "user", "content": data.message},
+    ]
 
     client = AsyncOpenAI(api_key=openai_key)
+    response = await run_chat_completion(client, api_key, messages, use_tools=True)
+    response_message = response.choices[0].message
 
-    response = await client.chat.completions.create(
-        model=settings.CHAT_MODEL,
-        temperature=api_key.temperature,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            *recent_messages,
-            {"role": "user", "content": data.message},
-        ],
-    )
+    tool_calls = response_message.tool_calls or []
 
-    answer = response.choices[0].message.content or ""
+    if tool_calls:
+        messages.append(response_message)
+
+        for tool_call in tool_calls:
+            if tool_call.function.name == CONTACT_TOOL_NAME:
+                try:
+                    arguments = tool_call.function.arguments
+                    import json
+
+                    payload = json.loads(arguments or "{}")
+                except ValueError:
+                    payload = {}
+
+                apply_visitor_patch(visitor, payload)
+
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": "Visitor contact information was saved.",
+                    }
+                )
+
+        response = await run_chat_completion(client, api_key, messages, use_tools=False)
+        answer = response.choices[0].message.content or ""
+    else:
+        answer = response_message.content or ""
 
     assistant_message = ChatMessage(
         conversation_id=conversation.id,
@@ -268,9 +481,11 @@ async def chat_with_api_key(data: ChatRequest, db: AsyncSession):
     now = datetime.utcnow()
     conversation.last_message_at = now
     conversation.updated_at = now
+    visitor.updated_at = now
 
     await db.commit()
     await db.refresh(conversation)
+    await db.refresh(visitor)
 
     return {
         "answer": answer,
@@ -279,5 +494,6 @@ async def chat_with_api_key(data: ChatRequest, db: AsyncSession):
         "display_name": api_key.display_name,
         "avatar_url": api_key.avatar_url,
         "welcome_message": api_key.welcome_message,
+        "visitor": serialize_visitor(visitor),
         "used_resources": matches,
     }

@@ -1,5 +1,14 @@
 import { apiRequest } from '@/api/context/apiClient';
 
+export type HistoryVisitor = {
+  id: number;
+  external_user_id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  notes?: string | null;
+};
+
 export type HistoryMessage = {
   id: number;
   conversation_id: number;
@@ -14,6 +23,7 @@ export type HistoryConversation = {
   id: number;
   api_key_id: number;
   created_by_id: number | null;
+  visitor_id?: number | null;
   external_user_id: string | null;
   title: string | null;
   last_message_at: string | null;
@@ -23,6 +33,7 @@ export type HistoryConversation = {
   last_message?: string | null;
   api_key_name?: string | null;
   display_name?: string | null;
+  visitor?: HistoryVisitor | null;
 };
 
 export type HistoryConversationDetail = HistoryConversation & {
